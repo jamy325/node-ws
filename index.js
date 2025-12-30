@@ -112,6 +112,8 @@ function handleVlessConnection(ws, msg) {
   const host = ATYP == 1 ? msg.slice(i, i += 4).join('.') :
     (ATYP == 2 ? new TextDecoder().decode(msg.slice(i + 1, i += 1 + msg.slice(i, i + 1).readUInt8())) :
     (ATYP == 3 ? msg.slice(i, i += 16).reduce((s, b, i, a) => (i % 2 ? s.concat(a.slice(i - 1, i + 1)) : s), []).map(b => b.readUInt16BE(0).toString(16)).join(':') : ''));
+
+
   ws.send(new Uint8Array([VERSION, 0]));
   const duplex = createWebSocketStream(ws);
   resolveHost(host)
