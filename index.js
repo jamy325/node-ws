@@ -137,6 +137,7 @@ function resolveHost(host) {
           tryNextDNS();
         })
         .catch(error => {
+          console.log("dns error ", error.message)
           tryNextDNS();
         });
     }
@@ -245,7 +246,9 @@ function handleTrojConnection(ws, msg) {
     const duplex = createWebSocketStream(ws);
     resolveHost(host)
       .then(resolvedIP => {
+                  console.log("net.connect ", resolvedIP,port)
         net.connect({ host: resolvedIP, port }, function () {
+                       console.log("net.connected ", resolvedIP,port)
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
@@ -259,7 +262,10 @@ function handleTrojConnection(ws, msg) {
         });
       })
       .catch(error => {
+                console.log("net.connect 2 ", host,port)
         net.connect({ host, port }, function () {
+   console.log("net.connected 2 ", host,port)
+
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
@@ -306,6 +312,7 @@ function handleSsConnection(ws, msg) {
 
     port = msg.readUInt16BE(offset);
     offset += 2;
+    console.log(`recv ${host}:${port}`)
 
     if (isBlockedDomain(host)) {
       ws.close();
@@ -314,12 +321,13 @@ function handleSsConnection(ws, msg) {
     const duplex = createWebSocketStream(ws);
     resolveHost(host)
       .then(resolvedIP => {
+        console.log("net.connect ", resolvedIP,port)
+
         net.connect({ host: resolvedIP, port }, function () {
-          console.log("handleSsConnection ", resolvedIP, port)
+          console.log("connected ", resolvedIP, port)
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-
           duplex.on('error', (err) => {
               console.log("duplex handleSsConnection error", resolvedIP, port, err)
            }).pipe(this).on('error', (err) => {
@@ -331,6 +339,8 @@ function handleSsConnection(ws, msg) {
          });
       })
       .catch(error => {
+                console.log("net.connect2 ", host,port)
+
         net.connect({ host, port }, function () {
           console.log("handleSsConnection2 ", resolvedIP, port)
 
