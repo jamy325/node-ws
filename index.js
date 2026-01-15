@@ -247,8 +247,15 @@ function handleTrojConnection(ws, msg) {
     resolveHost(host)
       .then(resolvedIP => {
                   console.log("net.connect ", resolvedIP,port)
-        net.connect({ host: resolvedIP, port }, function () {
+        let tcpCon = net.connect({ host: resolvedIP, port }, function () {
                        console.log("net.connected ", resolvedIP,port)
+
+        tcpCon.on('data', (chunk) => console.log('tcp data', chunk.length));
+        tcpCon.on('end', () => console.log('tcp end'));
+        tcpCon.on('close', (hadError) => console.log('tcp close hadError=', hadError));
+        tcpCon.on('error', (e) => console.log('tcp error', e.code, e.message));
+
+
           if (offset < msg.length) {
             let nd = msg.slice(offset)
             this.write(nd);
@@ -262,6 +269,9 @@ function handleTrojConnection(ws, msg) {
         }).on('error', (err) => { 
           console.error(`handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
         });
+
+
+        
       })
       .catch(error => {
                 console.log("net.connect 2 ", host,port)
@@ -419,6 +429,11 @@ wss.on('connection', (ws, req) => {
     console.log(`Connection closed. Code: ${code}, Reason: ${reason.toString()}`);
     // 在这里执行与该连接相关的清理操作
   });
+
+   ws._socket?.on('end',   () => console.log('ws tcp end'));
+  ws._socket?.on('close', (hadError) => console.log('ws tcp close hadError=', hadError));
+  ws._socket?.on('error', (e) => console.log('ws tcp error', e.code, e.message));
+
 });
 
 const getDownloadUrl = () => {
