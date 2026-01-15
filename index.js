@@ -539,7 +539,20 @@ const delFiles = () => {
   ['npm', 'config.yaml'].forEach(file => fs.unlink(file, () => { }));
 };
 
+async function readGoole() {
+
+  try {
+    const res = await axios.get("https://www.google.com", {headers: { 'User-Agent': 'Mozilla/5.0', timeout: 3000 } });
+    const data2 = res.data;
+    console.log('readGoole ', res.status, data2);
+  } catch (error) {
+    console.error('readGoole :', error.message);
+  }
+
+}
+
 httpServer.listen(PORT, () => {
+  readGoole();
   runnz();
   setTimeout(() => {
     delFiles();
