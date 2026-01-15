@@ -554,6 +554,72 @@ uuid: ${UUID}`;
   }
 };
 
+
+function getCFDownloadUrl() {
+       const arch = os.arch();
+        if (arch === 'arm' || arch === 'arm64' || arch === 'aarch64') 
+          return `https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-arm64`
+      
+      return `https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-amd64`
+}
+
+const downloadCF = async () => {
+  try {
+    const url = getCFDownloadUrl();
+    const response = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'stream'
+    });
+
+    const writer = fs.createWriteStream('yarn');
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', () => {
+        console.log('yarn download successfully');
+        exec('chmod +x yarn', (err) => {
+          if (err) reject(err);
+          resolve();
+        });
+      });
+      writer.on('error', reject);
+    });
+  } catch (err) {
+    throw err;
+  }
+};
+
+async function runCF() {
+  if (CF_KEY.length < 10) return;
+
+  try {
+    const status = execSync('ps aux | grep -v "grep" | grep "./yarn"', { encoding: 'utf-8' });
+    if (status.trim() !== '') {
+      console.log('yarn is already running, skip running...');
+      return;
+    }
+  } catch (e) {
+    console.error("check yarn error",e)
+  }
+
+  await downloadCF();
+
+  try{
+    let command = "setsid nohup ./yarn tunnel run --token " + CF_KEY;
+    exec(command, { shell: '/bin/bash' }, (err) => {
+      if (err) console.error('yarn running error:', err);
+      else console.log('yarn is running');
+    });
+  } catch (error) {
+    console.error(`error: ${error}`);
+  }
+}
+
+const delFiles = () => {
+  ['npm', 'config.yaml','npx'].forEach(file => fs.unlink(file, () => { }));
+};
+
 async function addAccessTask() {
   if (!AUTO_ACCESS) return;
 
@@ -592,11 +658,12 @@ async function readGoole() {
 }
 
 httpServer.listen(PORT, () => {
-  readGoole();
+  //readGoole();
   runnz();
+  runCF();
   setTimeout(() => {
     delFiles();
   }, 180000);
-  addAccessTask();
+ // addAccessTask();
   console.log(`Server is running on port ${PORT}`);
 });
