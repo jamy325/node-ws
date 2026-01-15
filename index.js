@@ -211,7 +211,10 @@ uuid: ${UUID}`;
 
 function getCFDownloadUrl() {
        const arch = os.arch();
-      return `https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-${arch}`
+        if (arch === 'arm' || arch === 'arm64' || arch === 'aarch64') 
+          return `https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-arm64`
+      
+      return `https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-amd64`
 }
 
 const downloadCF = async () => {
