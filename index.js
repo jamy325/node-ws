@@ -251,10 +251,17 @@ function handleTrojConnection(ws, msg) {
                        console.log("net.connected ", resolvedIP,port)
 
         tcpCon.on('data', (chunk) => console.log('tcp data', chunk.length));
-        tcpCon.on('end', () => console.log('tcp end'));
         tcpCon.on('close', (hadError) => console.log('tcp close hadError=', hadError));
-        tcpCon.on('error', (e) => console.log('tcp error', e.code, e.message));
 
+          tcpCon.on('end', () => {
+            console.log('tcp end')
+            if (ws.readyState === ws.OPEN) ws.close(1000, 'upstream end');
+          });
+
+          tcpCon.on('close', (hadError) => {
+            console.log('tcp error', e.code, e.message)
+            if (ws.readyState === ws.OPEN) ws.close(hadError ? 1011 : 1000);
+          });
 
           if (offset < msg.length) {
             let nd = msg.slice(offset)
@@ -419,6 +426,11 @@ wss.on('connection', (ws, req) => {
     console.error("ws on message error ", err)
   });
 
+  const interval = setInterval(() => {
+    if (ws.readyState === ws.OPEN) ws.ping();
+  }, 1000);
+
+
     // 监听错误事件（可选）
   ws.on('error', (error) => {
     console.error('WebSocket error:', error);
@@ -426,6 +438,7 @@ wss.on('connection', (ws, req) => {
 
   // 监听单个连接的关闭事件
   ws.on('close', (code, reason) => {
+    clearInterval(interval)
     console.log(`Connection closed. Code: ${code}, Reason: ${reason.toString()}`);
     // 在这里执行与该连接相关的清理操作
   });
