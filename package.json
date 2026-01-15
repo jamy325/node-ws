@@ -1,6 +1,7 @@
 {
   "name": "node-ws",
   "version": "1.0.0",
+  "type":"commonjs",
   "description": "Node.js Server",
   "main": "index.js",
   "author": "eooce",
