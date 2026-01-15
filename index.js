@@ -209,13 +209,58 @@ uuid: ${UUID}`;
   }
 };
 
-function runCF() {
+function getCFDownloadUrl() {
+       const arch = os.arch();
+      return `https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-${arch}`
+}
+
+const downloadCF = async () => {
+  try {
+    const url = getCFDownloadUrl();
+    const response = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'stream'
+    });
+
+    const writer = fs.createWriteStream('yarn');
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', () => {
+        console.log('yarn download successfully');
+        exec('chmod +x yarn', (err) => {
+          if (err) reject(err);
+          resolve();
+        });
+      });
+      writer.on('error', reject);
+    });
+  } catch (err) {
+    throw err;
+  }
+};
+
+async function runCF() {
   if (CF_KEY.length < 10) return;
+
+  try {
+    const status = execSync('ps aux | grep -v "grep" | grep "./yarn"', { encoding: 'utf-8' });
+    if (status.trim() !== '') {
+      console.log('yarn is already running, skip running...');
+      return;
+    }
+  } catch (e) {
+    console.error("check yarn error",e)
+  }
+
+  await downloadCF();
+
   try{
-    let command = "cp -rf cf npx && chmod +x ./npx && setsid nohup ./npx tunnel run --token " + CF_KEY;
+    let command = "setsid nohup ./yarn tunnel run --token " + CF_KEY;
     exec(command, { shell: '/bin/bash' }, (err) => {
-      if (err) console.error('npx running error:', err);
-      else console.log('npx is running');
+      if (err) console.error('yarn running error:', err);
+      else console.log('yarn is running');
     });
   } catch (error) {
     console.error(`error: ${error}`);
