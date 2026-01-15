@@ -250,7 +250,9 @@ function handleTrojConnection(ws, msg) {
         net.connect({ host: resolvedIP, port }, function () {
                        console.log("net.connected ", resolvedIP,port)
           if (offset < msg.length) {
-            this.write(msg.slice(offset));
+            let nd = msg.slice(offset)
+            this.write(nd);
+            console.log("write data", nd)
           }
           duplex.on('error', (err) => {
           console.error(`duplex handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
