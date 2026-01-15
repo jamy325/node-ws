@@ -20,7 +20,8 @@ const WSPATH = process.env.WSPATH || UUID.slice(0, 8);     // 节点路径，默
 const SUB_PATH = process.env.SUB_PATH || 'sub';            // 获取节点的订阅路径
 const NAME = process.env.NAME || '';                       // 节点名称
 const PORT = process.env.PORT || 3000;                     // http和ws服务端口
-const CF_KEY  = process.env.CF_KEY || '';                   //CF_KEY 
+const CF_KEY = process.env.CF_KEY || '';                     // CF_KEY
+
 let uuid = UUID.replace(/-/g, ""), CurrentDomain = DOMAIN, Tls = 'tls', CurrentPort = 443, ISP = '';
 const DNS_SERVERS = ['8.8.4.4', '1.1.1.1'];
 const BLOCKED_DOMAINS = [
@@ -70,7 +71,6 @@ async function getip() {
 
 // http route
 const httpServer = http.createServer(async (req, res) => {
-    console.log(`Server recv ${req.url}`);
   if (req.url === '/') {
     const filePath = path.join(__dirname, 'index.html');
     fs.readFile(filePath, 'utf8', (err, content) => {
@@ -137,7 +137,6 @@ function resolveHost(host) {
           tryNextDNS();
         })
         .catch(error => {
-          console.log("dns error ", error.message)
           tryNextDNS();
         });
     }
@@ -170,17 +169,13 @@ function handleVlsConnection(ws, msg) {
       net.connect({ host: resolvedIP, port }, function () {
         this.write(msg.slice(i));
         duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-      }).on('error', (err) => {
-        console.error(`handleVlsConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
-       });
+      }).on('error', () => { });
     })
     .catch(error => {
       net.connect({ host, port }, function () {
         this.write(msg.slice(i));
         duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-      }).on('error', (err) => { 
-          console.error(`handleVlsConnection connect ${host} ${port} error `, err.message ? err.message : err);
-      });
+      }).on('error', () => { });
     });
 
   return true;
@@ -237,65 +232,28 @@ function handleTrojConnection(ws, msg) {
     if (offset < msg.length && msg[offset] === 0x0d && msg[offset + 1] === 0x0a) {
       offset += 2;
     }
-    console.log(`recv ${host}:${port}`)
+
     if (isBlockedDomain(host)) {
-      console.log("blocked")
       ws.close();
       return false;
     }
     const duplex = createWebSocketStream(ws);
     resolveHost(host)
       .then(resolvedIP => {
-                  console.log("net.connect ", resolvedIP,port)
-        let tcpCon = net.connect({ host: resolvedIP, port }, function () {
-                       console.log("net.connected ", resolvedIP,port)
-
-        tcpCon.on('data', (chunk) => console.log('tcp data', chunk.length));
-        tcpCon.on('close', (hadError) => console.log('tcp close hadError=', hadError));
-
-          tcpCon.on('end', () => {
-            console.log('tcp end')
-            if (ws.readyState === ws.OPEN) ws.close(1000, 'upstream end');
-          });
-
-          tcpCon.on('close', (hadError) => {
-            console.log('tcp error', e.code, e.message)
-            if (ws.readyState === ws.OPEN) ws.close(hadError ? 1011 : 1000);
-          });
-
-          if (offset < msg.length) {
-            let nd = msg.slice(offset)
-            this.write(nd);
-            console.log("write data", nd)
-          }
-          duplex.on('error', (err) => {
-          console.error(`duplex handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
-           }).pipe(this).on('error', ( err ) => {
-          console.error(`pipe handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
-            }).pipe(duplex);
-        }).on('error', (err) => { 
-          console.error(`handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
-        });
-
-
-        
-      })
-      .catch(error => {
-                console.log("net.connect 2 ", host,port)
-        net.connect({ host, port }, function () {
-   console.log("net.connected 2 ", host,port)
-
+        net.connect({ host: resolvedIP, port }, function () {
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-          duplex.on('error', (err) => {
-          console.error(`duplex handleTrojConnection ${host} ${port} error `, err.message ? err.message : err);
-           }).pipe(this).on('error', (err) => { 
-          console.error(`pipe handleTrojConnection  ${host} ${port} error `, err.message ? err.message : err);
-           }).pipe(duplex);
-        }).on('error', (err) => { 
-          console.error(`handleTrojConnection connect ${host} ${port} error `, err.message ? err.message : err);
-        });
+          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+        }).on('error', () => { });
+      })
+      .catch(error => {
+        net.connect({ host, port }, function () {
+          if (offset < msg.length) {
+            this.write(msg.slice(offset));
+          }
+          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+        }).on('error', () => { });
       });
 
     return true;
@@ -331,7 +289,6 @@ function handleSsConnection(ws, msg) {
 
     port = msg.readUInt16BE(offset);
     offset += 2;
-    console.log(`recv ${host}:${port}`)
 
     if (isBlockedDomain(host)) {
       ws.close();
@@ -340,41 +297,20 @@ function handleSsConnection(ws, msg) {
     const duplex = createWebSocketStream(ws);
     resolveHost(host)
       .then(resolvedIP => {
-        console.log("net.connect ", resolvedIP,port)
-
         net.connect({ host: resolvedIP, port }, function () {
-          console.log("connected ", resolvedIP, port)
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-          duplex.on('error', (err) => {
-              console.log("duplex handleSsConnection error", resolvedIP, port, err)
-           }).pipe(this).on('error', (err) => {
-                console.log("pipe handleSsConnection error", resolvedIP, port, err)
-            }).pipe(duplex);
-
-        }).on('error', (err) => {
-           console.error(`handleSsConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
-         });
+          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+        }).on('error', () => { });
       })
       .catch(error => {
-                console.log("net.connect2 ", host,port)
-
         net.connect({ host, port }, function () {
-          console.log("handleSsConnection2 ", resolvedIP, port)
-
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-          duplex.on('error', (err) => {
-          console.log("duplex handleSsConnection error", host, port, err)
-           }).pipe(this).on('error', (err) => { 
-          console.log("pipe handleSsConnection error", host, port, err)
-           }).pipe(duplex);
-
-        }).on('error', () => { 
-            console.error(`handleSsConnection connect ${host} ${port} error `, err.message ? err.message : err);
-        });
+          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+        }).on('error', () => { });
       });
 
     return true;
@@ -387,7 +323,6 @@ function handleSsConnection(ws, msg) {
 const wss = new WebSocket.Server({ server: httpServer });
 wss.on('connection', (ws, req) => {
   const url = req.url || '';
-  console.log("wss url " + url);
 
   const expectedPath = `/${WSPATH}`;
   if (!url.startsWith(expectedPath)) {
@@ -396,7 +331,6 @@ wss.on('connection', (ws, req) => {
   }
 
   ws.once('message', msg => {
-    console.log("ws recv msg ", msg)
     // VLE-SS (version byte 0 + 16 bytes UUID)
     if (msg.length > 17 && msg[0] === 0) {
       const id = msg.slice(1, 17);
@@ -422,31 +356,7 @@ wss.on('connection', (ws, req) => {
     }
 
     ws.close();
-  }).on('error', (err) => { 
-    console.error("ws on message error ", err)
-  });
-
-  const interval = setInterval(() => {
-    if (ws.readyState === ws.OPEN) ws.ping();
-  }, 1000);
-
-
-    // 监听错误事件（可选）
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-  });
-
-  // 监听单个连接的关闭事件
-  ws.on('close', (code, reason) => {
-    clearInterval(interval)
-    console.log(`Connection closed. Code: ${code}, Reason: ${reason.toString()}`);
-    // 在这里执行与该连接相关的清理操作
-  });
-
-   ws._socket?.on('end',   () => console.log('ws tcp end'));
-  ws._socket?.on('close', (hadError) => console.log('ws tcp close hadError=', hadError));
-  ws._socket?.on('error', (e) => console.log('ws tcp error', e.code, e.message));
-
+  }).on('error', () => { });
 });
 
 const getDownloadUrl = () => {
@@ -553,7 +463,6 @@ uuid: ${UUID}`;
     console.error(`error: ${error}`);
   }
 };
-
 
 function getCFDownloadUrl() {
        const arch = os.arch();
