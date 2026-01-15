@@ -641,9 +641,6 @@ async function addAccessTask() {
   }
 }
 
-const delFiles = () => {
-  ['npm', 'config.yaml'].forEach(file => fs.unlink(file, () => { }));
-};
 
 async function readGoole() {
 
