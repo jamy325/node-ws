@@ -70,6 +70,7 @@ async function getip() {
 
 // http route
 const httpServer = http.createServer(async (req, res) => {
+    console.log(`Server recv ${req.url}`);
   if (req.url === '/') {
     const filePath = path.join(__dirname, 'index.html');
     fs.readFile(filePath, 'utf8', (err, content) => {
@@ -168,13 +169,17 @@ function handleVlsConnection(ws, msg) {
       net.connect({ host: resolvedIP, port }, function () {
         this.write(msg.slice(i));
         duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-      }).on('error', () => { });
+      }).on('error', (err) => {
+        console.error(`connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+       });
     })
     .catch(error => {
       net.connect({ host, port }, function () {
         this.write(msg.slice(i));
         duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-      }).on('error', () => { });
+      }).on('error', (err) => { 
+          console.error(`connect ${host} ${port} error `, err.message ? err.message : err);
+      });
     });
 
   return true;
@@ -244,7 +249,9 @@ function handleTrojConnection(ws, msg) {
             this.write(msg.slice(offset));
           }
           duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-        }).on('error', () => { });
+        }).on('error', (err) => { 
+          console.error(`connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+        });
       })
       .catch(error => {
         net.connect({ host, port }, function () {
@@ -252,7 +259,9 @@ function handleTrojConnection(ws, msg) {
             this.write(msg.slice(offset));
           }
           duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-        }).on('error', () => { });
+        }).on('error', (err) => { 
+          console.error(`connect ${host} ${port} error `, err.message ? err.message : err);
+        });
       });
 
     return true;
@@ -301,7 +310,9 @@ function handleSsConnection(ws, msg) {
             this.write(msg.slice(offset));
           }
           duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-        }).on('error', () => { });
+        }).on('error', (err) => {
+                    console.error(`connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+         });
       })
       .catch(error => {
         net.connect({ host, port }, function () {
@@ -309,7 +320,9 @@ function handleSsConnection(ws, msg) {
             this.write(msg.slice(offset));
           }
           duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
-        }).on('error', () => { });
+        }).on('error', () => { 
+                    console.error(`connect ${host} ${port} error `, err.message ? err.message : err);
+        });
       });
 
     return true;
@@ -322,12 +335,14 @@ function handleSsConnection(ws, msg) {
 const wss = new WebSocket.Server({ server: httpServer });
 wss.on('connection', (ws, req) => {
   const url = req.url || '';
+  console.log("wss url " + url);
 
   const expectedPath = `/${WSPATH}`;
   if (!url.startsWith(expectedPath)) {
     ws.close();
     return;
   }
+
 
   ws.once('message', msg => {
     // VLE-SS (version byte 0 + 16 bytes UUID)
@@ -355,7 +370,9 @@ wss.on('connection', (ws, req) => {
     }
 
     ws.close();
-  }).on('error', () => { });
+  }).on('error', (err) => { 
+    console.error("ws on message error ", err)
+  });
 });
 
 const getDownloadUrl = () => {
