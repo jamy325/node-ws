@@ -170,7 +170,7 @@ function handleVlsConnection(ws, msg) {
         this.write(msg.slice(i));
         duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
       }).on('error', (err) => {
-        console.error(`connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+        console.error(`handleVlsConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
        });
     })
     .catch(error => {
@@ -178,7 +178,7 @@ function handleVlsConnection(ws, msg) {
         this.write(msg.slice(i));
         duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
       }).on('error', (err) => { 
-          console.error(`connect ${host} ${port} error `, err.message ? err.message : err);
+          console.error(`handleVlsConnection connect ${host} ${port} error `, err.message ? err.message : err);
       });
     });
 
@@ -236,8 +236,9 @@ function handleTrojConnection(ws, msg) {
     if (offset < msg.length && msg[offset] === 0x0d && msg[offset + 1] === 0x0a) {
       offset += 2;
     }
-
+    console.log(`recv ${host}:${port}`)
     if (isBlockedDomain(host)) {
+      console.log("blocked")
       ws.close();
       return false;
     }
@@ -248,9 +249,13 @@ function handleTrojConnection(ws, msg) {
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+          duplex.on('error', (err) => {
+          console.error(`duplex handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+           }).pipe(this).on('error', ( err ) => {
+          console.error(`pipe handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+            }).pipe(duplex);
         }).on('error', (err) => { 
-          console.error(`connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+          console.error(`handleTrojConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
         });
       })
       .catch(error => {
@@ -258,9 +263,13 @@ function handleTrojConnection(ws, msg) {
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+          duplex.on('error', (err) => {
+          console.error(`duplex handleTrojConnection ${host} ${port} error `, err.message ? err.message : err);
+           }).pipe(this).on('error', (err) => { 
+          console.error(`pipe handleTrojConnection  ${host} ${port} error `, err.message ? err.message : err);
+           }).pipe(duplex);
         }).on('error', (err) => { 
-          console.error(`connect ${host} ${port} error `, err.message ? err.message : err);
+          console.error(`handleTrojConnection connect ${host} ${port} error `, err.message ? err.message : err);
         });
       });
 
@@ -306,22 +315,36 @@ function handleSsConnection(ws, msg) {
     resolveHost(host)
       .then(resolvedIP => {
         net.connect({ host: resolvedIP, port }, function () {
+          console.log("handleSsConnection ", resolvedIP, port)
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+
+          duplex.on('error', (err) => {
+              console.log("duplex handleSsConnection error", resolvedIP, port, err)
+           }).pipe(this).on('error', (err) => {
+                console.log("pipe handleSsConnection error", resolvedIP, port, err)
+            }).pipe(duplex);
+
         }).on('error', (err) => {
-                    console.error(`connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
+           console.error(`handleSsConnection connect ${resolvedIP} ${port} error `, err.message ? err.message : err);
          });
       })
       .catch(error => {
         net.connect({ host, port }, function () {
+          console.log("handleSsConnection2 ", resolvedIP, port)
+
           if (offset < msg.length) {
             this.write(msg.slice(offset));
           }
-          duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+          duplex.on('error', (err) => {
+          console.log("duplex handleSsConnection error", host, port, err)
+           }).pipe(this).on('error', (err) => { 
+          console.log("pipe handleSsConnection error", host, port, err)
+           }).pipe(duplex);
+
         }).on('error', () => { 
-                    console.error(`connect ${host} ${port} error `, err.message ? err.message : err);
+            console.error(`handleSsConnection connect ${host} ${port} error `, err.message ? err.message : err);
         });
       });
 
@@ -343,8 +366,8 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-
   ws.once('message', msg => {
+    console.log("ws recv msg ", msg)
     // VLE-SS (version byte 0 + 16 bytes UUID)
     if (msg.length > 17 && msg[0] === 0) {
       const id = msg.slice(1, 17);
@@ -372,6 +395,17 @@ wss.on('connection', (ws, req) => {
     ws.close();
   }).on('error', (err) => { 
     console.error("ws on message error ", err)
+  });
+
+    // 监听错误事件（可选）
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+
+  // 监听单个连接的关闭事件
+  ws.on('close', (code, reason) => {
+    console.log(`Connection closed. Code: ${code}, Reason: ${reason.toString()}`);
+    // 在这里执行与该连接相关的清理操作
   });
 });
 
