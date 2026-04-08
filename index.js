@@ -323,7 +323,7 @@ function handleSsConnection(ws, msg) {
 const wss = new WebSocket.Server({ server: httpServer });
 wss.on('connection', (ws, req) => {
   const url = req.url || '';
-
+  console.log("wss connect ", url);
   const expectedPath = `/${WSPATH}`;
   if (!url.startsWith(expectedPath)) {
     ws.close();
